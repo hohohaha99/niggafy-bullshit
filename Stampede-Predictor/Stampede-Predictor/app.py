@@ -1,5 +1,6 @@
 # Required Imports
 from flask import Flask, render_template, request, url_for, Response, stream_with_context, redirect, send_from_directory, jsonify
+from flask_cors import CORS # Import CORS
 import os
 import cv2 # OpenCV
 # import tensorflow as tf -> No longer needed for TF Hub model
@@ -18,6 +19,7 @@ import threading # For thread safety with shared status [cite: 1]
 
 # --- Flask Application Setup --- [cite: 2]
 app = Flask(__name__)
+CORS(app) # Enable CORS for all routes
 
 # --- Configuration for Folders --- [cite: 2]
 UPLOAD_FOLDER = 'uploads'
@@ -115,6 +117,10 @@ live_status_lock = threading.Lock()
 live_status_data = {"status": "Initializing", "persons": 0}
 # Using a Queue to signal updates to the SSE generator
 status_update_queue = Queue()
+
+# --- SOS Alert State ---
+sos_lock = threading.Lock()
+sos_data = {"active": False, "lat": None, "lng": None, "timestamp": None}
 
 # --- Helper Functions ---
 def analyze_density_grid(density_grid):
@@ -326,7 +332,7 @@ def process_media_content(content, content_width, content_height, frame_or_image
         else: chance_text, chance_color = "Stampede Chance: Low", (0, 128, 0) # [cite: 38]
 
         status_text = f"Risk: {frame_display_status}"
-        person_count_text = f"Persons: {confirmed_person_count_this_content}"
+        # person_count_text = f"Persons: {confirmed_person_count_this_content}"
 
         # Draw text using helper function
         font = cv2.FONT_HERSHEY_SIMPLEX
@@ -337,8 +343,9 @@ def process_media_content(content, content_width, content_height, frame_or_image
         bg_color = (0, 0, 0) # Black background
 
         draw_text_with_bg(processed_content, status_text, (10, 20 + text_padding), font, font_scale, status_color, bg_color, font_thickness, text_padding, bg_alpha) # [cite: 15]
-        (text_w_p, _), _ = cv2.getTextSize(person_count_text, font, font_scale, font_thickness) # [cite: 39]
-        draw_text_with_bg(processed_content, person_count_text, (content_width - text_w_p - 10 - text_padding * 2, 20 + text_padding), font, font_scale, (255, 255, 255), bg_color, font_thickness, text_padding, bg_alpha)
+        # Person count display removed as per user request
+        # (text_w_p, _), _ = cv2.getTextSize(person_count_text, font, font_scale, font_thickness) # [cite: 39]
+        # draw_text_with_bg(processed_content, person_count_text, (content_width - text_w_p - 10 - text_padding * 2, 20 + text_padding), font, font_scale, (255, 255, 255), bg_color, font_thickness, text_padding, bg_alpha)
         (text_w_c, text_h_c), baseline_c = cv2.getTextSize(chance_text, font, font_scale, font_thickness) # [cite: 40]
         draw_text_with_bg(processed_content, chance_text, (10, content_height - 10 - baseline_c), font, font_scale, chance_color, bg_color, font_thickness, text_padding, bg_alpha)
 
@@ -768,7 +775,47 @@ def generate_live_frames(camera_index=0): # Default to 0 [cite: 84]
         with live_status_lock: # [cite: 98]
             live_status_data["status"] = "Stream Ended"
             live_status_data["persons"] = 0
+            live_status_data["persons"] = 0
+            live_status_data["sos"] = None # Reset SOS on stream end
         status_update_queue.put(True) # [cite: 98]
+
+
+@app.route('/api/sos', methods=['POST'])
+def sos_alert_route():
+    """Receives SOS alerts from the user dashboard."""
+    global sos_data
+    try:
+        data = request.json
+        print(f"!!! SOS ALERT RECEIVED: {data}")
+        with sos_lock:
+            sos_data["active"] = True
+            sos_data["lat"] = data.get('latitude')
+            sos_data["lng"] = data.get('longitude')
+            sos_data["timestamp"] = time.time()
+        
+        # Trigger an SSE update
+        with live_status_lock:
+             # We just need to signal the update, the generator reads various states
+             pass
+        status_update_queue.put(True)
+        
+        return jsonify({"status": "success", "message": "SOS Alert Received"}), 200
+    except Exception as e:
+        print(f"Error processing SOS alert: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/sos/clear', methods=['POST'])
+def clear_sos_route():
+    """Clears the active SOS alert."""
+    global sos_data
+    with sos_lock:
+        sos_data["active"] = False
+        sos_data["lat"] = None
+        sos_data["lng"] = None
+        sos_data["timestamp"] = None
+    
+    status_update_queue.put(True)
+    return jsonify({"status": "success"}), 200
 
 
 @app.route('/live')
@@ -802,6 +849,13 @@ def generate_status_updates():
             current_status = None
             with live_status_lock: # Get the latest status safely [cite: 101]
                 current_status = live_status_data.copy()
+
+            # Merge SOS Alert Data
+            with sos_lock:
+                if sos_data["active"]:
+                     current_status["sos_alert"] = sos_data.copy()
+                else:
+                     current_status["sos_alert"] = None
 
             # Only send if the status or person count has changed
             if current_status != last_sent_status:

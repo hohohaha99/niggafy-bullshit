@@ -98,15 +98,18 @@ export function initializeCrowdSimulation(hallCount: number = 4): CrowdPerson[] 
             y = 440 + Math.random() * 240;
         }
 
+        const angle = Math.random() * 2 * Math.PI;
+        const initialSpeed = 0.5 + Math.random() * 0.5;
+
         people.push({
             id: `person-${i}`,
             x,
             y,
-            vx: 0,
-            vy: 0,
+            vx: Math.cos(angle) * initialSpeed,
+            vy: Math.sin(angle) * initialSpeed,
             hall,
             targetExit,
-            speed: 0.5 + Math.random() * 0.5,
+            speed: initialSpeed,
             status: 'in_hall',
         });
     }
@@ -114,145 +117,41 @@ export function initializeCrowdSimulation(hallCount: number = 4): CrowdPerson[] 
     return people;
 }
 
-// Update crowd positions for animation with structured movement
+// Update crowd positions for contained hall simulation
 export function updateCrowdPositions(people: CrowdPerson[]): CrowdPerson[] {
     return people.map(person => {
-        let { x, y, status, targetExit, hall, speed } = person;
-        let vx = 0;
-        let vy = 0;
+        let { x, y, vx, vy, hall, speed } = person;
 
-        // Structured Movement Logic
-        if (status === 'in_hall') {
-            // Move towards the central corridor "gate" of the hall
-            // Hall 1 (TL) -> Target: (380, 240) or (240, 380) depending on exit?
-            // Simplified: All halls empty into the central cross intersection area
-            let targetX = 400;
-            let targetY = 400;
-
-            if (hall === 1) { targetX = 370; targetY = 370; }
-            else if (hall === 2) { targetX = 430; targetY = 370; }
-            else if (hall === 3) { targetX = 370; targetY = 430; }
-            else if (hall === 4) { targetX = 430; targetY = 430; }
-
-            // Move towards target
-            const dx = targetX - x;
-            const dy = targetY - y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
-            if (dist < 10) {
-                status = 'merging';
-            } else {
-                vx = (dx / dist) * speed;
-                vy = (dy / dist) * speed;
-            }
-        }
-        else if (status === 'merging') {
-            // Move to center of corridor lanes
-            const targetX = 400;
-            const targetY = 400;
-            const dx = targetX - x;
-            const dy = targetY - y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
-            if (dist < 5) {
-                status = 'in_lane';
-            } else {
-                vx = (dx / dist) * speed;
-                vy = (dy / dist) * speed;
-            }
-        }
-        else if (status === 'in_lane') {
-            // Move along the main axes towards target exit
-            // Exit 1 (Top): x=380..420, y -> 0
-            // Exit 2 (Right): y=380..420, x -> 800
-            // Exit 3 (Bottom): x=380..420, y -> 800
-            // Exit 4 (Left): y=380..420, x -> 0
-
-            if (targetExit === 1) { // Top
-                if (Math.abs(x - 400) > 15) { // Center X first
-                    vx = (400 - x) * 0.1;
-                } else {
-                    vy = -speed * 1.5; // Move Up
-                }
-                if (y < 50) status = 'at_exit';
-            }
-            else if (targetExit === 2) { // Right
-                if (Math.abs(y - 400) > 15) { // Center Y first
-                    vy = (400 - y) * 0.1;
-                } else {
-                    vx = speed * 1.5; // Move Right
-                }
-                if (x > 750) status = 'at_exit';
-            }
-            else if (targetExit === 3) { // Bottom
-                if (Math.abs(x - 400) > 15) {
-                    vx = (400 - x) * 0.1;
-                } else {
-                    vy = speed * 1.5; // Move Down
-                }
-                if (y > 750) status = 'at_exit';
-            }
-            else if (targetExit === 4) { // Left
-                if (Math.abs(y - 400) > 15) {
-                    vy = (400 - y) * 0.1;
-                } else {
-                    vx = -speed * 1.5; // Move Left
-                }
-                if (x < 50) status = 'at_exit';
-            }
-        }
-        else if (status === 'at_exit') {
-            // Congregate and move slowly near exit
-            // Add some jitter to look like a crowd
-            vx = (Math.random() - 0.5) * 0.5;
-            vy = (Math.random() - 0.5) * 0.5;
-
-            // Keep within exit zone
-            if (targetExit === 1) { // Top
-                if (y > 60) vy -= 0.2;
-                if (y < 10) vy += 0.2;
-                if (x < 360) vx += 0.2;
-                if (x > 440) vx -= 0.2;
-            }
-            else if (targetExit === 2) { // Right
-                if (x < 740) vx += 0.2;
-                if (x > 790) vx -= 0.2;
-                if (y < 360) vy += 0.2;
-                if (y > 440) vy -= 0.2;
-            }
-            else if (targetExit === 3) { // Bottom
-                if (y < 740) vy += 0.2;
-                if (y > 790) vy -= 0.2;
-                if (x < 360) vx += 0.2;
-                if (x > 440) vx -= 0.2;
-            }
-            else if (targetExit === 4) { // Left
-                if (x > 60) vx -= 0.2;
-                if (x < 10) vx += 0.2;
-                if (y < 360) vy += 0.2;
-                if (y > 440) vy -= 0.2;
-            }
-
-            // Occasionally reset to hall to keep simulation flowing
-            if (Math.random() < 0.005) {
-                status = 'in_hall';
-                hall = Math.floor(Math.random() * 4) + 1;
-                person.targetExit = Math.floor(Math.random() * 4) + 1; // Pick new target
-                // Reset pos
-                if (hall === 1) { x = 200; y = 200; }
-                else if (hall === 2) { x = 600; y = 200; }
-                else if (hall === 3) { x = 200; y = 600; }
-                else { x = 600; y = 600; }
-            }
+        // Randomly change velocity occasionally to simulate natural movement
+        if (Math.random() < 0.05) {
+            const angle = Math.random() * 2 * Math.PI;
+            vx = Math.cos(angle) * speed;
+            vy = Math.sin(angle) * speed;
         }
 
         // Apply movement
         let newX = x + vx;
         let newY = y + vy;
 
-        // Hard boundaries for map
-        newX = Math.max(0, Math.min(800, newX));
-        newY = Math.max(0, Math.min(800, newY));
+        // Define Hall Boundaries based on VenueMap
+        // Hall 1 (TL): 120, 120, 240, 240 -> x[120-360], y[120-360]
+        // Hall 2 (TR): 440, 120, 240, 240 -> x[440-680], y[120-360]
+        // Hall 3 (BL): 120, 440, 240, 240 -> x[120-360], y[440-680]
+        // Hall 4 (BR): 440, 440, 240, 240 -> x[440-680], y[440-680]
+
+        const padding = 20; // Keep them slightly away from walls
+        let minX = 0, maxX = 800, minY = 0, maxY = 800;
+
+        if (hall === 1) { minX = 120 + padding; maxX = 360 - padding; minY = 120 + padding; maxY = 360 - padding; }
+        else if (hall === 2) { minX = 440 + padding; maxX = 680 - padding; minY = 120 + padding; maxY = 360 - padding; }
+        else if (hall === 3) { minX = 120 + padding; maxX = 360 - padding; minY = 440 + padding; maxY = 680 - padding; }
+        else if (hall === 4) { minX = 440 + padding; maxX = 680 - padding; minY = 440 + padding; maxY = 680 - padding; }
+
+        // Bounce off walls
+        if (newX < minX) { newX = minX; vx = -vx; }
+        if (newX > maxX) { newX = maxX; vx = -vx; }
+        if (newY < minY) { newY = minY; vy = -vy; }
+        if (newY > maxY) { newY = maxY; vy = -vy; }
 
         return {
             ...person,
@@ -260,8 +159,7 @@ export function updateCrowdPositions(people: CrowdPerson[]): CrowdPerson[] {
             y: newY,
             vx,
             vy,
-            status,
-            hall
+            status: 'in_hall' // Force status to stay in_hall
         };
     });
 }

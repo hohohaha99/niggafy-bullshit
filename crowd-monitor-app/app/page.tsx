@@ -150,7 +150,86 @@ export default function Home() {
                     />
                 </div>
             </main>
+
+            {/* SOS Trigger Button */}
+            <SOSButton />
         </div>
+    );
+}
+
+// SOS Button Component
+function SOSButton() {
+    const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+
+    const handleSOS = () => {
+        if (!confirm("Are you sure you want to send an emergency SOS alert?")) return;
+
+        setStatus('sending');
+
+        if (!navigator.geolocation) {
+            alert("Geolocation is not supported by your browser");
+            setStatus('error');
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+
+                // Send to Admin Backend (Flask)
+                // Assuming Flask runs on localhost:5000
+                fetch('http://localhost:5000/api/sos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ latitude, longitude })
+                })
+                    .then(res => {
+                        if (res.ok) {
+                            setStatus('sent');
+                            alert("SOS Alert Sent! Help is on the way.");
+                            setTimeout(() => setStatus('idle'), 5000);
+                        } else {
+                            throw new Error('Server error');
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        setStatus('error');
+                        alert(`Failed to send SOS: ${err.message}. Ensure the backend is running at ${'http://localhost:5000'}`);
+                    });
+            },
+            (err) => {
+                console.error(err);
+                alert("Unable to retrieve location. Sending alert without location...");
+                // Fallback sending without location
+                fetch('http://localhost:5000/api/sos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ latitude: null, longitude: null })
+                }).then(() => {
+                    setStatus('sent');
+                    alert("SOS Alert Sent (No Location)!");
+                    setTimeout(() => setStatus('idle'), 5000);
+                });
+            }
+        );
+    };
+
+    return (
+        <button
+            onClick={handleSOS}
+            disabled={status === 'sending' || status === 'sent'}
+            className={`fixed bottom-6 right-6 z-50 rounded-full p-6 shadow-2xl transition-all duration-300 transform hover:scale-110 active:scale-95 flex items-center justify-center gap-2 font-bold text-white ${status === 'sent' ? 'bg-green-600 animate-bounce' :
+                status === 'error' ? 'bg-gray-600' :
+                    'bg-red-600 hover:bg-red-700 animate-pulse'
+                }`}
+            style={{ minWidth: '80px', minHeight: '80px' }}
+        >
+            <AlertTriangle className="w-8 h-8" />
+            <span className="sr-only">SOS</span>
+            {status === 'sending' ? '...' :
+                status === 'sent' ? 'SENT' : 'SOS'}
+        </button>
     );
 }
 

@@ -1,4 +1,4 @@
-// File: C:\Users\Priyanshu\crowd-monitor-app\app\layout.tsx
+// File: C:\crowd302632\crowd-monitor-app\app\layout.tsx
 import * as entry from '../../../app/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

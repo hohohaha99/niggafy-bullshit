@@ -429,6 +429,63 @@
         padding: 16px;
       }
     }
+
+    /* SOS Overlay Styles */
+    .sos-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(239, 68, 68, 0.9);
+      z-index: 9999;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      text-align: center;
+      animation: sos-pulse 1s infinite alternate;
+    }
+
+    @keyframes sos-pulse {
+      from {
+        background: rgba(239, 68, 68, 0.8);
+      }
+
+      to {
+        background: rgba(220, 38, 38, 0.95);
+      }
+    }
+
+    .sos-title {
+      font-size: 3rem;
+      font-weight: 800;
+      margin-bottom: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .sos-info {
+      font-size: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .sos-btn {
+      background: white;
+      color: #ef4444;
+      border: none;
+      padding: 1rem 2rem;
+      font-size: 1.2rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    .sos-btn:hover {
+      transform: scale(1.05);
+    }
   </style>
 </head>
 
@@ -453,7 +510,8 @@
   <main class="main">
     <header class="header">
       <button class="mobile-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
-      <div class="header-title">Live Monitoring Console</div>
+      <div class="header-title">Live Monitoring Console <span style="font-size: 0.8em; opacity: 0.7;">(v2.0)</span>
+      </div>
       <div class="status-ind online" id="connection-status"><span class="status-dot"></span>Connecting...</div>
     </header>
     <div class="content">
@@ -469,13 +527,7 @@
             <div class="stat-value" id="stampede-chance-heading">Initializing...</div>
           </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-icon">👥</div>
-          <div class="stat-info">
-            <div class="stat-label">Persons</div>
-            <div class="stat-value" id="persons-heading">N/A</div>
-          </div>
-        </div>
+
       </div>
       <div class="card">
         <div class="card-header"><span class="card-title">📹 Live Video Feed</span></div>
@@ -501,12 +553,20 @@
         </div>
       </div>
     </div>
+    </div>
   </main>
+
+  <div id="sos-alert-overlay" class="sos-overlay">
+    <div class="sos-title">🚨 SOS EMERGENCY 🚨</div>
+    <div class="sos-info" id="sos-details">Help requested at user location!</div>
+    <button class="sos-btn" onclick="clearSosAlert()">ACKNOWLEDGE & CLEAR</button>
+  </div>
+
   <audio id="alertBeep" src="{{ url_for('static', filename='beep.mp3') }}" preload="auto"></audio>
   <script>
-    const cameraSelect = document.getElementById('cameraSelect'), videoFeed = document.getElementById('live-video-feed'), chanceH = document.getElementById('stampede-chance-heading'), personsH = document.getElementById('persons-heading'), connStatus = document.getElementById('connection-status'), camLabel = document.getElementById('camera-label'), riskIcon = document.getElementById('risk-icon'), alertAudio = document.getElementById('alertBeep'), muteBtn = document.getElementById('muteButton');
+    const cameraSelect = document.getElementById('cameraSelect'), videoFeed = document.getElementById('live-video-feed'), chanceH = document.getElementById('stampede-chance-heading'), connStatus = document.getElementById('connection-status'), camLabel = document.getElementById('camera-label'), riskIcon = document.getElementById('risk-icon'), alertAudio = document.getElementById('alertBeep'), muteBtn = document.getElementById('muteButton');
     let isPlaying = false, isMuted = false;
-    function updateStream() { const i = cameraSelect.value; videoFeed.src = `{{ url_for('video_feed_route') }}?camera=${i}`; camLabel.textContent = `Camera ${i}`; chanceH.textContent = 'Initializing...'; personsH.textContent = 'N/A'; connStatus.innerHTML = '<span class="status-dot"></span>Connecting...'; connStatus.className = 'status-ind online'; }
+    function updateStream() { const i = cameraSelect.value; videoFeed.src = `{{ url_for('video_feed_route') }}?camera=${i}`; camLabel.textContent = `Camera ${i}`; chanceH.textContent = 'Initializing...'; connStatus.innerHTML = '<span class="status-dot"></span>Connecting...'; connStatus.className = 'status-ind online'; }
     cameraSelect.addEventListener('change', updateStream); document.addEventListener('DOMContentLoaded', updateStream);
     videoFeed.onerror = () => { connStatus.innerHTML = '<span class="status-dot"></span>Feed Error'; connStatus.className = 'status-ind error'; };
     function playAlert() { if (!isPlaying && !isMuted && alertAudio) { isPlaying = true; alertAudio.play().catch(() => { isPlaying = false; }); } }
@@ -515,9 +575,82 @@
     if (typeof EventSource !== 'undefined') {
       const es = new EventSource("{{ url_for('stream_status_route') }}");
       es.onopen = () => { connStatus.innerHTML = '<span class="status-dot"></span>Connected'; connStatus.className = 'status-ind online'; };
-      es.onmessage = (e) => { try { const d = JSON.parse(e.data); let txt = 'Unknown', cls = 'normal', snd = false, ico = '📊'; if (d.status) { const s = d.status; if (s.includes('CRITICAL')) { txt = '⚠️ CRITICAL'; cls = 'critical'; snd = true; ico = '🚨'; } else if (s.includes('Warning')) { txt = '⚠️ High'; cls = 'warning'; snd = true; ico = '⚠️'; } else if (s.includes('Detected')) { txt = '📊 Moderate'; cls = 'warning'; } else if (s === 'Normal') { txt = '✓ Low'; cls = 'normal'; ico = '✅'; } else if (s.includes('Error')) { txt = '❌ Error'; cls = 'critical'; ico = '❌'; } else { txt = s; } } chanceH.textContent = txt; chanceH.style.color = cls === 'critical' ? 'var(--danger)' : cls === 'warning' ? 'var(--warning)' : 'var(--success)'; riskIcon.textContent = ico; riskIcon.className = 'stat-icon ' + cls; personsH.textContent = d.persons !== undefined ? d.persons : 'N/A'; if (snd) playAlert(); } catch (err) { console.error(err); } };
+      es.onmessage = (e) => {
+        try {
+          const d = JSON.parse(e.data);
+
+          // Handle SOS
+          if (d.sos_alert) {
+            const overlay = document.getElementById('sos-alert-overlay');
+            const details = document.getElementById('sos-details');
+            overlay.style.display = 'flex';
+            let locText = 'Location: Unknown';
+            if (d.sos_alert.lat && d.sos_alert.lng) {
+              locText = `Location: ${d.sos_alert.lat.toFixed(5)}, ${d.sos_alert.lng.toFixed(5)}`;
+            }
+            details.textContent = `Help requested! ${locText}`;
+
+            // Play alert sound repeatedly if not muted
+            if (!isMuted && alertAudio && alertAudio.paused) {
+              alertAudio.loop = true;
+              alertAudio.play().catch(console.error);
+            }
+          } else {
+            // Hide if no SOS (and maybe stop sound)
+            const overlay = document.getElementById('sos-alert-overlay');
+            if (overlay.style.display === 'flex') {
+              // Don't auto hide, waiting for manual acknowledge usually, 
+              // but if backend says no SOS, we should probably hide.
+              // Let's rely on the clear button for now, or backend state.
+              // If backend sends no sos_alert, it means it was cleared.
+              overlay.style.display = 'none';
+              if (alertAudio) {
+                alertAudio.loop = false;
+                alertAudio.pause();
+                alertAudio.currentTime = 0;
+              }
+            }
+          }
+
+          let txt = 'Unknown', cls = 'normal', snd = false, ico = '📊';
+          if (d.status) {
+            const s = d.status;
+            if (s.includes('CRITICAL')) { txt = '⚠️ CRITICAL'; cls = 'critical'; snd = true; ico = '🚨'; }
+            else if (s.includes('Warning')) { txt = '⚠️ High'; cls = 'warning'; snd = true; ico = '⚠️'; }
+            else if (s.includes('Detected')) { txt = '📊 Moderate'; cls = 'warning'; }
+            else if (s === 'Normal') { txt = '✓ Low'; cls = 'normal'; ico = '✅'; }
+            else if (s.includes('Error')) { txt = '❌ Error'; cls = 'critical'; ico = '❌'; }
+            else { txt = s; }
+          }
+          chanceH.textContent = txt;
+          chanceH.style.color = cls === 'critical' ? 'var(--danger)' : cls === 'warning' ? 'var(--warning)' : 'var(--success)';
+          riskIcon.textContent = ico;
+          riskIcon.className = 'stat-icon ' + cls;
+
+          if (snd && !d.sos_alert) playAlert(); // Only play normal alert if no SOS (users prefer SOS sound)
+        } catch (err) { console.error(err); }
+      };
       es.onerror = () => { connStatus.innerHTML = '<span class="status-dot"></span>Disconnected'; connStatus.className = 'status-ind error'; es.close(); };
     }
+
+    function clearSosAlert() {
+      fetch('{{ url_for("clear_sos_route") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+        .then(res => res.json())
+        .then(data => {
+          console.log("SOS Cleared", data);
+          document.getElementById('sos-alert-overlay').style.display = 'none';
+          if (alertAudio) {
+            alertAudio.loop = false;
+            alertAudio.pause();
+            alertAudio.currentTime = 0;
+          }
+        })
+        .catch(console.error);
+    }
+
     document.querySelectorAll('.nav-item').forEach(i => i.addEventListener('click', () => document.getElementById('sidebar').classList.remove('open')));
   </script>
 </body>
