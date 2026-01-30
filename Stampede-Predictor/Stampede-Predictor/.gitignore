@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+*.pyc
+uploads/
+static/processed_frames/
+static/processed_videos/
+static/processed_images/
+static/debug_frames/
+*.pt
+*.mp4
+*.avi
+.vscode/
+.idea/

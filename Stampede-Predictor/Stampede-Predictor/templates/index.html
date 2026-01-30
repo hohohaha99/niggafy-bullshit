@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>CrowdCast - Backend Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="{{ url_for('static', filename='StampedeAi_Icon.png') }}" type="image/png">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    :root {
+      --sidebar-bg: #1a1d21;
+      --sidebar-width: 240px;
+      --header-height: 56px;
+      --bg-body: #0f1114;
+      --bg-card: #1a1d21;
+      --bg-card-hover: #22262b;
+      --border-color: #2d3139;
+      --accent: #4f8cff;
+      --accent-hover: #6ba1ff;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-body);
+      color: var(--text-primary);
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: var(--sidebar-width);
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      height: 100vh;
+      z-index: 100;
+    }
+
+    .sidebar-brand {
+      padding: 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .sidebar-brand img {
+      height: 32px;
+      filter: brightness(1.1);
+    }
+
+    .sidebar-brand h1 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .sidebar-brand span {
+      font-size: 0.65rem;
+      background: var(--accent);
+      color: #fff;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: auto;
+      font-weight: 500;
+    }
+
+    .sidebar-nav {
+      padding: 16px 12px;
+      flex: 1;
+    }
+
+    .nav-section {
+      margin-bottom: 24px;
+    }
+
+    .nav-section-title {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      padding: 0 12px;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.15s ease;
+      cursor: pointer;
+    }
+
+    .nav-item:hover {
+      background: var(--bg-card-hover);
+      color: var(--text-primary);
+    }
+
+    .nav-item.active {
+      background: rgba(79, 140, 255, 0.15);
+      color: var(--accent);
+    }
+
+    .nav-icon {
+      font-size: 1.1rem;
+      width: 20px;
+      text-align: center;
+    }
+
+    .sidebar-footer {
+      padding: 16px 20px;
+      border-top: 1px solid var(--border-color);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Main Content */
+    .main-content {
+      margin-left: var(--sidebar-width);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Header */
+    .top-header {
+      height: var(--header-height);
+      background: var(--sidebar-bg);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .header-title {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: var(--success);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--success);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.5;
+      }
+    }
+
+    /* Dashboard Content */
+    .dashboard-content {
+      padding: 24px;
+      flex: 1;
+    }
+
+    .page-header {
+      margin-bottom: 24px;
+    }
+
+    .page-header h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .page-header p {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .stat-change {
+      font-size: 0.75rem;
+      margin-top: 4px;
+    }
+
+    .stat-change.positive {
+      color: var(--success);
+    }
+
+    .stat-change.negative {
+      color: var(--danger);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      margin-bottom: 24px;
+    }
+
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .card-body {
+      padding: 20px;
+    }
+
+    /* Action Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: #fff;
+    }
+
+    .btn-success:hover {
+      background: #1fa855;
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+    }
+
+    .btn-outline:hover {
+      background: var(--bg-card-hover);
+      color: var(--text-primary);
+      border-color: var(--text-muted);
+    }
+
+    /* Upload Form */
+    .upload-zone {
+      border: 2px dashed var(--border-color);
+      border-radius: 8px;
+      padding: 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .upload-zone:hover {
+      border-color: var(--accent);
+      background: rgba(79, 140, 255, 0.05);
+    }
+
+    .upload-icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+    }
+
+    .upload-text {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+    }
+
+    .upload-hint {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .file-name {
+      margin-top: 12px;
+      font-size: 0.8rem;
+      color: var(--accent);
+    }
+
+    /* Live Feed Card */
+    .live-card {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(79, 140, 255, 0.1));
+      border-color: rgba(34, 197, 94, 0.3);
+    }
+
+    .live-card .card-header {
+      border-color: rgba(34, 197, 94, 0.3);
+    }
+
+    /* Loading State */
+    .loading-state {
+      display: none;
+      text-align: center;
+      padding: 32px;
+    }
+
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid var(--border-color);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* Results/Error states */
+    .results-area,
+    .error-message {
+      display: none;
+      padding: 20px;
+      border-radius: 6px;
+      margin-top: 16px;
+    }
+
+    .results-area {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: var(--success);
+    }
+
+    .error-message {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: var(--danger);
+    }
+
+    /* Grid Layout for Cards */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 24px;
+    }
+
+    /* Feature List */
+    .feature-list {
+      list-style: none;
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .feature-item:last-child {
+      border-bottom: none;
+    }
+
+    .feature-icon {
+      font-size: 1.25rem;
+      margin-top: 2px;
+    }
+
+    .feature-content h4 {
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .feature-content p {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    /* Mobile Hamburger */
+    .mobile-toggle {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text-primary);
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .main-content {
+        margin-left: 0;
+      }
+
+      .mobile-toggle {
+        display: block;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .card-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .dashboard-content {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <img src="{{ url_for('static', filename='StampedeAi_Logo.png') }}" alt="Logo">
+      <h1>CrowdCast</h1>
+      <span>Backend</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <div class="nav-section-title">Overview</div>
+        <a href="#" class="nav-item active">
+          <span class="nav-icon">📊</span> Dashboard
+        </a>
+        <a href="{{ url_for('live_route') }}" class="nav-item">
+          <span class="nav-icon">📹</span> Live Monitoring
+        </a>
+      </div>
+
+      <div class="nav-section">
+        <div class="nav-section-title">Analysis</div>
+        <a href="#upload-section" class="nav-item">
+          <span class="nav-icon">📤</span> Upload Media
+        </a>
+        <a href="#" class="nav-item">
+          <span class="nav-icon">📁</span> History
+        </a>
+      </div>
+
+      <div class="nav-section">
+        <div class="nav-section-title">System</div>
+        <a href="#" class="nav-item">
+          <span class="nav-icon">⚙️</span> Settings
+        </a>
+        <a href="#" class="nav-item">
+          <span class="nav-icon">📖</span> Documentation
+        </a>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      © 2025 Team Arete
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Top Header -->
+    <header class="top-header">
+      <button class="mobile-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+      <div class="header-title">Event Control Dashboard</div>
+      <div class="header-actions">
+        <div class="status-indicator">
+          <span class="status-dot"></span>
+          System Online
+        </div>
+      </div>
+    </header>
+
+    <!-- Dashboard Content -->
+    <div class="dashboard-content">
+      <div class="page-header">
+        <h2>Crowd Monitoring Dashboard</h2>
+        <p>Real-time crowd density analysis for event organizers</p>
+      </div>
+
+      <!-- Stats Overview -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Model Status</div>
+          <div class="stat-value" style="font-size: 1.25rem; color: var(--success);">YOLOv8 Active</div>
+          <div class="stat-change positive">✓ Ready for detection</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Detection Mode</div>
+          <div class="stat-value" style="font-size: 1.25rem;">Person Class</div>
+          <div class="stat-change">Confidence: 2.1%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Grid Analysis</div>
+          <div class="stat-value" style="font-size: 1.25rem;">8×8 Cells</div>
+          <div class="stat-change">64 zones monitored</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Alert Threshold</div>
+          <div class="stat-value" style="font-size: 1.25rem; color: var(--warning);">5+ persons</div>
+          <div class="stat-change">Per cell warning</div>
+        </div>
+      </div>
+
+      <!-- Main Action Cards -->
+      <div class="card-grid">
+        <!-- Live Monitoring Card -->
+        <div class="card live-card">
+          <div class="card-header">
+            <span class="card-title">🟢 Live Monitoring</span>
+            <span class="status-indicator" style="font-size: 0.75rem;">
+              <span class="status-dot"></span> Active
+            </span>
+          </div>
+          <div class="card-body">
+            <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 0.875rem;">
+              Start real-time webcam analysis with instant risk detection and alerts.
+            </p>
+            <a href="{{ url_for('live_route') }}" class="btn btn-success">
+              🎥 Open Live Feed
+            </a>
+          </div>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="card" id="upload-section">
+          <div class="card-header">
+            <span class="card-title">📤 Batch Analysis</span>
+          </div>
+          <div class="card-body">
+            <form id="uploadForm" method="post" action="{{ url_for('upload_media_route') }}"
+              enctype="multipart/form-data">
+              <label class="upload-zone" for="media">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">Drop files here or click to upload</div>
+                <div class="upload-hint">Supports: MP4, AVI, JPG, PNG</div>
+                <input type="file" id="media" name="media" accept="video/*,image/jpeg,image/png,image/gif" required>
+              </label>
+              <div id="fileName" class="file-name"></div>
+
+              <div style="margin-top: 16px; text-align: center;">
+                <button type="submit" class="btn btn-primary">▶ Run Analysis</button>
+              </div>
+            </form>
+
+            <div id="loadingState" class="loading-state">
+              <div class="spinner"></div>
+              <p style="color: var(--text-secondary);">Processing media...</p>
+              <p style="color: var(--text-muted); font-size: 0.75rem;">This may take a moment depending on file size</p>
+            </div>
+
+            <div id="resultsArea" class="results-area">
+              <p><strong>✓ Analysis Complete</strong></p>
+            </div>
+
+            <div id="errorState" class="error-message">
+              <p><strong>✗ Analysis Failed</strong></p>
+              <p id="errorMessageContent"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Features Card -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🔧 System Capabilities</span>
+        </div>
+        <div class="card-body">
+          <ul class="feature-list">
+            <li class="feature-item">
+              <span class="feature-icon">🤖</span>
+              <div class="feature-content">
+                <h4>AI-Powered Detection</h4>
+                <p>Uses YOLOv8 deep learning for accurate real-time person detection and tracking.</p>
+              </div>
+            </li>
+            <li class="feature-item">
+              <span class="feature-icon">🗺️</span>
+              <div class="feature-content">
+                <h4>Density Grid Mapping</h4>
+                <p>Divides venue into 64 zones with per-cell density calculations and risk assessment.</p>
+              </div>
+            </li>
+            <li class="feature-item">
+              <span class="feature-icon">🚨</span>
+              <div class="feature-content">
+                <h4>Automated Alerts</h4>
+                <p>Audio and visual alerts when crowd density exceeds safe thresholds.</p>
+              </div>
+            </li>
+            <li class="feature-item">
+              <span class="feature-icon">🎥</span>
+              <div class="feature-content">
+                <h4>Multi-Camera Support</h4>
+                <p>Connect and switch between multiple camera feeds for comprehensive coverage.</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    // File input handler
+    document.getElementById('media').addEventListener('change', function (e) {
+      const fileName = e.target.files[0] ? e.target.files[0].name : '';
+      document.getElementById('fileName').textContent = fileName ? '📎 ' + fileName : '';
+    });
+
+    // Form submission
+    document.getElementById('uploadForm').addEventListener('submit', function () {
+      document.getElementById('loadingState').style.display = 'block';
+      document.querySelector('[type="submit"]').disabled = true;
+    });
+
+    // Mobile menu
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        document.getElementById('sidebar').classList.remove('open');
+      });
+    });
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Analysis Results - CrowdCast Backend</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="{{ url_for('static', filename='StampedeAi_Icon.png') }}" type="image/png">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {
+      --sidebar-bg: #1a1d21;
+      --sidebar-width: 240px;
+      --bg-body: #0f1114;
+      --bg-card: #1a1d21;
+      --bg-hover: #22262b;
+      --border: #2d3139;
+      --accent: #4f8cff;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --text-1: #f1f5f9;
+      --text-2: #94a3b8;
+      --text-3: #64748b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-body);
+      color: var(--text-1);
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: var(--sidebar-width);
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border);
+      position: fixed;
+      height: 100vh;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-brand {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .sidebar-brand img {
+      height: 32px;
+    }
+
+    .sidebar-brand h1 {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .sidebar-brand span {
+      font-size: 0.65rem;
+      background: var(--accent);
+      color: #fff;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: auto;
+    }
+
+    .sidebar-nav {
+      padding: 16px 12px;
+      flex: 1;
+    }
+
+    .nav-section {
+      margin-bottom: 24px;
+    }
+
+    .nav-title {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      color: var(--text-3);
+      padding: 0 12px;
+      margin-bottom: 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      color: var(--text-2);
+      text-decoration: none;
+      font-size: 0.875rem;
+    }
+
+    .nav-item:hover {
+      background: var(--bg-hover);
+      color: var(--text-1);
+    }
+
+    .nav-item.active {
+      background: rgba(79, 140, 255, 0.15);
+      color: var(--accent);
+    }
+
+    .sidebar-footer {
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+      font-size: 0.75rem;
+      color: var(--text-3);
+    }
+
+    .main {
+      margin-left: var(--sidebar-width);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      height: 56px;
+      background: var(--sidebar-bg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .header-title {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .content {
+      padding: 24px;
+      flex: 1;
+    }
+
+    .page-header {
+      margin-bottom: 24px;
+    }
+
+    .page-header h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .page-header p {
+      color: var(--text-2);
+      font-size: 0.875rem;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 24px;
+    }
+
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .card-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .card-body {
+      padding: 20px;
+    }
+
+    .status-banner {
+      text-align: center;
+      padding: 24px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      border: 1px solid;
+    }
+
+    .status-banner.low {
+      background: rgba(34, 197, 94, 0.1);
+      border-color: rgba(34, 197, 94, 0.3);
+      color: var(--success);
+    }
+
+    .status-banner.moderate {
+      background: rgba(245, 158, 11, 0.1);
+      border-color: rgba(245, 158, 11, 0.3);
+      color: var(--warning);
+    }
+
+    .status-banner.high {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: var(--danger);
+    }
+
+    .status-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      color: var(--text-2);
+    }
+
+    .status-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .metric-card {
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .metric-label {
+      font-size: 0.7rem;
+      color: var(--text-3);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .metric-value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .media-container {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .media-container img,
+    .media-container video {
+      max-width: 100%;
+      max-height: 450px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .media-caption {
+      font-size: 0.8rem;
+      color: var(--text-3);
+      margin-top: 8px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 20px;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+      transition: all 0.15s;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #6ba1ff;
+      transform: translateY(-2px);
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-2);
+    }
+
+    .btn-outline:hover {
+      background: var(--bg-hover);
+      color: var(--text-1);
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    .error-box {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: var(--danger);
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .mobile-toggle {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text-1);
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+
+    @media(max-width:768px) {
+      .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s;
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .main {
+        margin-left: 0;
+      }
+
+      .mobile-toggle {
+        display: block;
+      }
+
+      .metrics-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .content {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand"><img src="{{ url_for('static', filename='StampedeAi_Logo.png') }}" alt="Logo">
+      <h1>CrowdCast</h1><span>Backend</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <div class="nav-title">Overview</div>
+        <a href="{{ url_for('index_route') }}" class="nav-item">📊 Dashboard</a>
+        <a href="{{ url_for('live_route') }}" class="nav-item">📹 Live Monitoring</a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-title">Analysis</div>
+        <a href="{{ url_for('index_route') }}#upload-section" class="nav-item">📤 Upload Media</a>
+        <a href="#" class="nav-item active">📁 Results</a>
+      </div>
+    </nav>
+    <div class="sidebar-footer">© 2025 Team Arete</div>
+  </aside>
+  <main class="main">
+    <header class="header">
+      <button class="mobile-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+      <div class="header-title">Analysis Results</div>
+    </header>
+    <div class="content">
+      <div class="page-header">
+        <h2>📊 Batch Analysis Report</h2>
+        <p>Crowd density analysis completed</p>
+      </div>
+
+      {% set status_class = 'low' %}
+      {% set status_text = '✓ Low Crowd Density' %}
+      {% if prediction_status and ('CRITICAL RISK' in prediction_status or 'Critical Density Cell Detected' in
+      prediction_status) %}
+      {% set status_class = 'high' %}
+      {% set status_text = '⚠️ CRITICAL RISK DETECTED' %}
+      {% elif prediction_status and 'Warning' in prediction_status %}
+      {% set status_class = 'moderate' %}
+      {% set status_text = '⚠️ High Density Warning' %}
+      {% elif prediction_status and 'Detected' in prediction_status %}
+      {% set status_class = 'moderate' %}
+      {% set status_text = '📊 Moderate Crowd Density' %}
+      {% elif prediction_status and 'Error' in prediction_status %}
+      {% set status_class = 'high' %}
+      {% set status_text = '❌ Analysis Error' %}
+      {% endif %}
+
+      <div class="status-banner {{ status_class }}">
+        <div class="status-label">Overall Risk Assessment</div>
+        <div class="status-value">{{ status_text }}</div>
+        <input type="hidden" id="prediction-status" value="{{ prediction_status | default('Unknown') }}">
+      </div>
+
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-label">👥 Max Persons</div>
+          <div class="metric-value">{{ max_persons | default('N/A') }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">⏱️ Process Time</div>
+          <div class="metric-value">{{ processing_time | default('N/A') }}s</div>
+        </div>
+      </div>
+
+      {% if processed_media_url %}
+      <div class="card">
+        <div class="card-header"><span class="card-title">🖼️ {% if output_media_type == 'video' %}Critical Frame
+            Capture{% else %}Processed Image{% endif %}</span></div>
+        <div class="card-body">
+          <div class="media-container">
+            <img src="{{ processed_media_url }}" alt="Processed Media">
+            {% if output_media_type == 'video' %}<p class="media-caption">Snapshot from full video analysis</p>{% endif
+            %}
+          </div>
+          <div class="actions">
+            {% if download_video_url %}<a href="{{ download_video_url }}" download class="btn btn-primary">⬇️ Download
+              Video</a>{% endif %}
+            <a href="{{ url_for('index_route') }}" class="btn btn-outline">← Back to Dashboard</a>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="error-box">
+        <p><strong>❌ Processing Failed</strong></p>
+        <p style="font-size:0.85rem;color:var(--text-2);margin-top:8px;">{{ prediction_status | default('Unknown error')
+          }}</p>
+      </div>
+      <div class="actions"><a href="{{ url_for('index_route') }}" class="btn btn-outline">← Back to Dashboard</a></div>
+      {% endif %}
+    </div>
+  </main>
+  <audio id="criticalBeep" src="{{ url_for('static', filename='beep.mp3') }}" preload="auto"></audio>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const s = document.getElementById('prediction-status'), a = document.getElementById('criticalBeep');
+      if (s && a) { try { const v = s.value; if (v.includes('CRITICAL') || v.includes('Warning')) a.play().catch(() => { }); } catch (e) { } }
+    });
+    document.querySelectorAll('.nav-item').forEach(i => i.addEventListener('click', () => document.getElementById('sidebar').classList.remove('open')));
+  </script>
+</body>
+
+</html>
